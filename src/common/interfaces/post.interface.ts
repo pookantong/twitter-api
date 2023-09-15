@@ -1,4 +1,11 @@
-import { Date, Types } from "mongoose";
+import { Types } from "mongoose";
+import { IComment } from "./comment.interface";
+
+export interface IPosts {
+  posts: IPost[]
+  currentPage: number
+  pageSize: number
+}
 
 export interface IPost {
   postId: Types.ObjectId
@@ -7,6 +14,7 @@ export interface IPost {
   timePassed: string;
   totalLiked: number;
   totalComment: number;
-  fileUrl: string[];
+  imageUrl: string[];
   liked: boolean
+  comments?: IComment[]
 }

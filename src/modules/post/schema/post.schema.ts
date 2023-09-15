@@ -7,7 +7,7 @@ export class Post extends Document {
   body: string;
 
   @Prop({ required: true })
-  userId: Types.ObjectId;
+  authorId: Types.ObjectId;
 
   @Prop({ default: [] })
   likedIds: Types.ObjectId[];
@@ -15,8 +15,8 @@ export class Post extends Document {
   @Prop({ default: [] })
   comments: Types.ObjectId[];
 
-  @Prop()
-  imagePaths: string[];
+  @Prop({ default: [] })
+  imageNames: string[];
 
   @Prop()
   createdAt: Date;
