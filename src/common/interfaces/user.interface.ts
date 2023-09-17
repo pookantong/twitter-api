@@ -3,10 +3,12 @@ import { Comment } from 'src/modules/comment/schema/comment.schema';
 
 export interface IUser {
   username: string;
+  profileName: string;
   bio: string;
   isFollow: boolean;
-  totalfollower: number;
-  totalfollowing: number;
+  totalFollower: number;
+  totalFollowing: number;
   joinAt: Date;
   profilePictureName: string;
+  coverImageName: string
 }

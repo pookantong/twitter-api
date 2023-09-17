@@ -36,7 +36,7 @@ export class PostService {
     });
     user.posts.push(post._id);
     await this.userModel.findByIdAndUpdate(user._id, user);
-    throw new HttpException('CREATE_SUCCESS', HttpStatus.OK);
+    throw new HttpException('CREATE_SUCCESS', HttpStatus.CREATED);
   }
 
   async editPost(
@@ -118,48 +118,118 @@ export class PostService {
   }
 
   async getPosts(page: number, limit: number, user: User): Promise<IPosts> {
-    const skip = (page - 1) * limit;
     const totalPosts = await this.postModel.countDocuments({});
     const pageSize = Math.ceil(totalPosts / limit);
+    if (page > pageSize) {
+      if (pageSize == 1) {
+        page = 1;
+      } else {
+        page = page % pageSize;
+      }
+    }
+    const skip = (page - 1) * limit;
     const posts = await this.postModel.aggregate([
       {
         $addFields: {
           isFollowedAuthor: {
-            $in: ['$authorId', user.follower],
+            $in: ['$authorId', user.following],
           },
+          createdAtWeek: { $week: '$createdAt' },
         },
       },
       {
         $sort: {
           isFollowedAuthor: -1,
+          createdAtWeek: -1,
           createdAt: -1,
         },
       },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: limit,
+      },
     ]);
-    if (page > pageSize) {
-      return await this.getPosts(page - pageSize, limit, user);
-    }
-    const iPosts: IPost[] = [];
-    for (const post of posts) {
-      const comments = await this.commentService.getPostComments(
-        post._id,
-        1,
-        3,
-        user,
-      );
-      const author = await this.userModel.findById(post.authorId);
-      iPosts.push({
+    const postPromises = posts.map(async (postId) => {
+      const post = await this.findById(postId);
+      const authorPromise = this.userModel
+        .findById(post.authorId)
+        .select('username profileName');
+      const isLikedPromise = post.likedIds.includes(user._id);
+
+      const [author, isLiked] = await Promise.all([
+        authorPromise,
+        isLikedPromise,
+      ]);
+
+      return {
         postId: post._id,
         body: post.body,
         username: author.username,
+        profileName: author.profileName,
         timePassed: await this.timePassed(post.createdAt),
         totalComment: post.comments.length,
         totalLiked: post.likedIds.length,
-        liked: post.likedIds.includes(user._id),
+        liked: isLiked,
         imageUrl: post.imageNames,
-        comments: comments,
-      });
+      };
+    });
+
+    const iPosts = await Promise.all(postPromises);
+    return { posts: iPosts, currentPage: page, pageSize };
+  }
+
+  async getPostsByUsername(
+    page: number,
+    limit: number,
+    user: User,
+    username: string,
+  ): Promise<IPosts> {
+    const author = await this.userModel.findOne({ username });
+    const totalPosts = await this.postModel.countDocuments({
+      authorId: author._id,
+    });
+    const pageSize = Math.ceil(totalPosts / limit);
+    if (page > pageSize) {
+      if (pageSize == 1) {
+        page = 1;
+      } else {
+        page = page - pageSize;
+      }
     }
+    const skip = (page - 1) * limit;
+    const posts = await this.postModel
+      .find({ authorId: author._id })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    const postPromises = posts.map(async (postId) => {
+      const post = await this.postModel.findById(postId);
+      const authorPromise = this.userModel
+        .findById(post.authorId)
+        .select('username profileName');
+      const isLikedPromise = post.likedIds.includes(user._id);
+
+      const [author, isLiked] = await Promise.all([
+        authorPromise,
+        isLikedPromise,
+      ]);
+
+      return {
+        postId: post._id,
+        body: post.body,
+        username: author.username,
+        profileName: author.profileName,
+        timePassed: await this.timePassed(post.createdAt),
+        totalComment: post.comments.length,
+        totalLiked: post.likedIds.length,
+        liked: isLiked,
+        imageUrl: post.imageNames,
+      };
+    });
+
+    const iPosts = await Promise.all(postPromises);
     return { posts: iPosts, currentPage: page, pageSize };
   }
 
@@ -172,10 +242,11 @@ export class PostService {
       postId: post._id,
       body: post.body,
       username: user.username,
+      profileName: user.profileName,
       timePassed: await this.timePassed(post.createdAt),
       totalComment: post.comments.length,
       totalLiked: post.likedIds.length,
-      liked: post.likedIds.includes(user._id),
+      liked: post.likedIds.includes(await user.id),
       imageUrl: post.imageNames,
     };
     return iPost;

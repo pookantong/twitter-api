@@ -135,10 +135,21 @@ export class PostController {
     page: number,
     @Query('limit', ParseIntPipe)
     limit: number,
+    @Query('username')
+    username: string,
     @GetUser()
     user: User,
   ): Promise<IPosts> {
-    return await this.postService.getPosts(page, limit, user);
+    if (!username) {
+      return await this.postService.getPosts(page, limit, user);
+    } else {
+      return await this.postService.getPostsByUsername(
+        page,
+        limit,
+        user,
+        username,
+      );
+    }
   }
 
   @Get(':postId')

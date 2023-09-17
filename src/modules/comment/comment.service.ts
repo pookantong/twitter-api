@@ -16,11 +16,13 @@ export class CommentService {
     private commentModel: mongoose.Model<Comment>,
     @InjectModel(Post.name)
     private postModel: mongoose.Model<Post>,
+    @InjectModel(User.name)
+    private userModel: mongoose.Model<User>,
   ) {}
 
   async createComment(
     createPostDto: CreateCommentDto,
-    file: Express.Multer.File,
+    files: Express.Multer.File[],
     user: User,
     postId: string,
   ) {
@@ -29,11 +31,12 @@ export class CommentService {
       body: createPostDto.body,
       userId: user._id,
       postId: post._id,
-      imageNames: file.filename
+      imageNames: files.map((file) => file.filename),
     });
-    post.comments.push(comment._id);
-    await this.postModel.findByIdAndUpdate(postId, post);
-    throw new HttpException('CREATE_SUCCESS', HttpStatus.OK);
+    await this.postModel.findByIdAndUpdate(postId, {
+      $push: { comments: comment._id },
+    });
+    throw new HttpException('CREATE_SUCCESS', HttpStatus.CREATED);
   }
 
   async likedComment(commentId: string, liked: boolean, user: User) {
@@ -79,45 +82,60 @@ export class CommentService {
   }
 
   async getPostComments(
-    postId: string | Types.ObjectId,
+    postId: string,
     page: number,
     limit: number,
     user: User,
   ): Promise<IComment[]> {
+    const post = await this.postModel.findById(postId);
+    const totalComment = await this.commentModel.countDocuments({
+      postId: post._id,
+    });
+    const pageSize = Math.ceil(totalComment / limit);
+    if (page > pageSize) {
+      if (pageSize == 1) {
+        page = 1;
+      } else {
+        page = page % pageSize;
+      }
+    }
     const skip = (page - 1) * limit;
-    //sort by total liked
     const comments = await this.commentModel.aggregate([
-      { $match: { postId: postId } || { postId: postId } },
+      { $match: { postId: post._id } },
       {
         $project: {
           body: 1,
           userId: 1,
-          PostId: 1,
+          postId: 1,
           likedIds: 1,
           comments: 1,
           imageNames: 1,
           createdAt: 1,
           updatedAt: 1,
           totalLiked: { $size: '$likedIds' },
+          liked: { $in: [user._id, '$likedIds'] },
         },
       },
       { $sort: { totalLiked: -1 } },
       { $skip: skip },
       { $limit: limit },
     ]);
-    const iComments: IComment[] = [];
-    //transform comment to IComment
-    for (const comment of comments) {
-      iComments.push({
-        postId: comment.postId,
-        body: comment.body,
-        username: user.username,
-        timePassed: await this.timePassed(comment.createdAt),
-        totalLiked: comment.totalLiked,
-        liked: comment.likedIds.includes(user._id),
-        imageUrl: comment.imageNames,
-      });
-    }
+    const iComments = await Promise.all(
+      comments.map(async (comment) => {
+        const timePassed = await this.timePassed(comment.createdAt);
+        return {
+          postId: comment.postId,
+          commentId: comment._id,
+          body: comment.body,
+          username: user.username,
+          totalLiked: comment.totalLiked,
+          liked: comment.liked,
+          imageUrl: comment.imageNames,
+          timePassed: timePassed,
+        };
+      }),
+    );
+
     return iComments;
   }
 

@@ -16,10 +16,6 @@ export class AuthService {
 
     async signUp(signUpDto: SignUpDto){
       const user = await this.usersService.createUser(signUpDto)
-
-      const token = this.jwtService.sign({username: user.username, email: user.email})
-
-      return {token}
     }
   
     async login(signInDto: SignInDto):Promise<{token: string}>{

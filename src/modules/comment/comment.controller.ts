@@ -30,7 +30,7 @@ export class CommentController {
 
   @Post(':postId')
   @UseInterceptors(
-    FileInterceptor('file', {
+    FilesInterceptor('files', 4, {
       storage: diskStorage({
         destination: './upload_files/comment',
         filename: (req, file, callback) => {
@@ -64,7 +64,7 @@ export class CommentController {
     @Body()
     createCommentDto: CreateCommentDto,
     @UploadedFiles()
-    file: Express.Multer.File,
+    files: Express.Multer.File[],
     @GetUser()
     user: User,
     @Param('postId')
@@ -72,7 +72,7 @@ export class CommentController {
   ) {
     await this.commentService.createComment(
       createCommentDto,
-      file,
+      files,
       user,
       postId,
     );
@@ -110,7 +110,7 @@ export class CommentController {
     limit: number,
     @Param('postId')
     postId: string,
-  ): Promise<IComment[]> {
-    return await this.commentService.getPostComments(postId, page, limit, user);
+  ){
+    return {comments: await this.commentService.getPostComments(postId, page, limit, user)}
   }
 }

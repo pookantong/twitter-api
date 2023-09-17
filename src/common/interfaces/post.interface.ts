@@ -11,6 +11,7 @@ export interface IPost {
   postId: Types.ObjectId
   body: string;
   username: string;
+  profileName: string
   timePassed: string;
   totalLiked: number;
   totalComment: number;

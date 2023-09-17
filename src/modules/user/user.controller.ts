@@ -6,10 +6,12 @@ import {
   HttpException,
   HttpStatus,
   Param,
+  ParseBoolPipe,
   Patch,
   Put,
   Query,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -17,7 +19,7 @@ import { UserService } from './user.service';
 import { User } from './schemas/user.schema';
 import { JwtAuthGuard } from 'src/common/guards/jwt.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { EditUserDto } from './dto/edit_user.dto';
@@ -30,7 +32,7 @@ export class UserController {
 
   @Put()
   @UseInterceptors(
-    FileInterceptor('file', {
+    FilesInterceptor('image', 2, {
       storage: diskStorage({
         destination: './upload_files/profile',
         filename: (req, file, callback) => {
@@ -47,7 +49,7 @@ export class UserController {
         if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
           return callback(
             new HttpException(
-              'Only image files are allowed!',
+              'Only image files are allowed for coverImage!',
               HttpStatus.BAD_REQUEST,
             ),
             false,
@@ -56,19 +58,23 @@ export class UserController {
         callback(null, true);
       },
       limits: {
-        fileSize: 5 * 1024 * 1024,
+        fileSize: 5 * 1024 * 1024, // 5MB limit for coverImage
       },
     }),
   )
   async editUser(
     @GetUser()
     user: User,
-    @UploadedFile()
-    image: Express.Multer.File,
+    @Query('profileImage')
+    profileImage: boolean,
+    @Query('coverImage')
+    coverImage: boolean,
+    @UploadedFiles()
+    image: Express.Multer.File[],
     @Body()
     editPostDto: EditUserDto,
   ) {
-    return this.userService.editUser(editPostDto, image, user);
+    return this.userService.editUser(editPostDto, image, profileImage, coverImage, user);
   }
 
   @Delete()
@@ -83,12 +89,12 @@ export class UserController {
   async followUser(
     @GetUser()
     user: User,
-    @Body()
-    body: FollowUserDto,
+    @Query('followStatus', ParseBoolPipe)
+    followStatus: boolean,
     @Param('username')
     username: string,
   ) {
-    return await this.userService.follow(username, body.followStatus, user);
+    return await this.userService.follow(username, followStatus, user);
   }
 
   @Get(':username')
@@ -99,5 +105,13 @@ export class UserController {
     username: string,
   ) {
     return this.userService.getUserProfile(username, user);
+  }
+
+  @Get()
+  async getProfile(
+    @GetUser()
+    user: User,
+  ) {
+    return this.userService.getProfile(user);
   }
 }
