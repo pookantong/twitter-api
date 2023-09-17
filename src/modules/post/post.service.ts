@@ -238,11 +238,12 @@ export class PostService {
     if (!post) {
       throw new HttpException('NOT_FOUND_POST', HttpStatus.NOT_FOUND);
     }
+    const author = await this.userModel.findById(post.authorId)
     const iPost = {
       postId: post._id,
       body: post.body,
-      username: user.username,
-      profileName: user.profileName,
+      username: author.username,
+      profileName: author.profileName,
       timePassed: await this.timePassed(post.createdAt),
       totalComment: post.comments.length,
       totalLiked: post.likedIds.length,

@@ -127,7 +127,7 @@ export class CommentService {
           postId: comment.postId,
           commentId: comment._id,
           body: comment.body,
-          username: user.username,
+          username: (await this.userModel.findById(comment.userId)).username,
           totalLiked: comment.totalLiked,
           liked: comment.liked,
           imageUrl: comment.imageNames,
