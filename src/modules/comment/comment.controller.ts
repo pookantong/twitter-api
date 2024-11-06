@@ -14,7 +14,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { CommentService } from './comment.service';
-import { JwtAuthGuard } from 'src/common/guards/jwt.guard';
+import { AccessTokenGuard } from 'src/modules/auth/guards/access-token.guard';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -24,7 +24,7 @@ import { User } from '../user/schemas/user.schema';
 import { IComment } from 'src/common/interfaces/comment.interface';
 
 @Controller('comment')
-@UseGuards(JwtAuthGuard)
+@UseGuards(AccessTokenGuard)
 export class CommentController {
   constructor(private commentService: CommentService) {}
 
@@ -110,7 +110,14 @@ export class CommentController {
     limit: number,
     @Param('postId')
     postId: string,
-  ){
-    return {comments: await this.commentService.getPostComments(postId, page, limit, user)}
+  ) {
+    return {
+      comments: await this.commentService.getPostComments(
+        postId,
+        page,
+        limit,
+        user,
+      ),
+    };
   }
 }

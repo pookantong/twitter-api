@@ -34,6 +34,9 @@ export class User extends Document {
   following: Types.ObjectId[];
 
   @Prop()
+  refreshToken: string;
+
+  @Prop()
   createdAt: Date;
 
   @Prop()

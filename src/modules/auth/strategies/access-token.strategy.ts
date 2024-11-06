@@ -7,22 +7,21 @@ import { InjectModel } from '@nestjs/mongoose';
 import { User } from 'src/modules/user/schemas/user.schema';
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy) {
+export class AccessTokenStrategy extends PassportStrategy(Strategy) {
   constructor(
     configService: ConfigService,
-    @InjectModel(User.name) private userModel: mongoose.Model<User>
-    ) {
+    @InjectModel(User.name) private userModel: mongoose.Model<User>,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      ignoreExpiration: false,
-      secretOrKey: configService.get<string>('jwt.secret'),
+      secretOrKey: configService.get<string>('JWT.ACCESS_SECRET'),
     });
   }
 
   async validate(payload: any) {
     const user = await this.userModel
-    .findOne({username: payload.username})
-    .select('-password')
+      .findOne({ _id: payload.id })
+      .select('-password');
     return user;
   }
 }

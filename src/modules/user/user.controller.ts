@@ -17,7 +17,7 @@ import {
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { User } from './schemas/user.schema';
-import { JwtAuthGuard } from 'src/common/guards/jwt.guard';
+import { AccessTokenGuard } from 'src/modules/auth/guards/access-token.guard';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -26,7 +26,7 @@ import { EditUserDto } from './dto/edit_user.dto';
 import { FollowUserDto } from './dto/follow_user.dto';
 
 @Controller('user')
-@UseGuards(JwtAuthGuard)
+@UseGuards(AccessTokenGuard)
 export class UserController {
   constructor(private userService: UserService) {}
 
@@ -74,7 +74,13 @@ export class UserController {
     @Body()
     editPostDto: EditUserDto,
   ) {
-    return this.userService.editUser(editPostDto, image, profileImage, coverImage, user);
+    return this.userService.editUser(
+      editPostDto,
+      image,
+      profileImage,
+      coverImage,
+      user,
+    );
   }
 
   @Delete()

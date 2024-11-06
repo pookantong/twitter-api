@@ -2,8 +2,8 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Types } from 'mongoose';
 import { User } from './schemas/user.schema';
-import { SignUpDto } from '../auth/dto/signUp.dto';
-import * as bcrypt from 'bcrypt';
+import { SignUpDto } from '../auth/dto/sign-up.dto';
+import * as argon2 from 'argon2';
 import * as fs from 'fs';
 import * as path from 'path';
 import { IUser } from 'src/common/interfaces/user.interface';
@@ -18,28 +18,21 @@ export class UserService {
     private postService: PostService,
   ) {}
 
-  async createUser(createUserDto: SignUpDto) {
-    const { username, email, password } = createUserDto;
+  async createUser(signUpDto: SignUpDto): Promise<User> {
+    const { username, email, password } = signUpDto;
 
-    if (username === (await this.userModel.findOne({ username }))?.username) {
-      throw new HttpException(
-        'USERNAME_IS_ALREADY_IN_USE',
-        HttpStatus.CONFLICT,
-      );
-    } else if (email === (await this.userModel.findOne({ email }))?.email) {
-      throw new HttpException('EMAIL_IS_ALREADY_IN_USE', HttpStatus.CONFLICT);
-    }
+    // return error if existing
+    await this.findExisting(signUpDto.username);
+    await this.findExisting(signUpDto.email);
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await argon2.hash(password);
 
-    await this.userModel.create({
+    return await this.userModel.create({
       profileName: username,
       username,
       email,
       password: hashedPassword,
     });
-
-    throw new HttpException('CREATE_SUCCESS', 201);
   }
 
   async editUser(
@@ -108,7 +101,7 @@ export class UserService {
       editUserDto.coverImageName = image[0].filename;
     }
     if (editUserDto.password) {
-      editUserDto.password = await bcrypt.hash(editUserDto.password, 10);
+      editUserDto.password = await argon2.hash(editUserDto.password);
     }
     const updatedUser = await this.update(user._id, editUserDto);
     throw new HttpException('EDIT_SUCCESS', 200);
@@ -197,7 +190,7 @@ export class UserService {
   async findByUsername(username: string): Promise<User | null> {
     const user = await this.userModel.findOne({ username }).exec();
     if (!user) {
-      throw new HttpException('USER_NOT_FOUND', 404);
+      throw new HttpException('USER_NOT_FOUND', HttpStatus.NOT_FOUND);
     }
     return user;
   }
@@ -205,23 +198,31 @@ export class UserService {
   async findByEmail(email: string): Promise<User | null> {
     const user = await this.userModel.findOne({ email }).exec();
     if (!user) {
-      throw new HttpException('USER_NOT_FOUND', 404);
+      throw new HttpException('USER_NOT_FOUND', HttpStatus.NOT_FOUND);
     }
     return user;
   }
 
-  async findById(userId: Types.ObjectId): Promise<User | null> {
-    const user = await this.userModel.findOne({ userId }).exec();
+  async findById(userId: Types.ObjectId | string): Promise<User | null> {
+    const user = await this.userModel.findOne({ _id: userId }).exec();
     if (!user) {
-      throw new HttpException('USER_NOT_FOUND', 404);
+      throw new HttpException('USER_NOT_FOUND', HttpStatus.NOT_FOUND);
     }
     return user;
   }
 
   async update(
     userId: Types.ObjectId | string,
-    updateData: EditUserDto | User,
+    updateData: EditUserDto | User | { refreshToken: string },
   ) {
     await this.userModel.findByIdAndUpdate(userId, updateData, { new: true });
+  }
+
+  async findExisting(data: any) {
+    if (await this.userModel.findOne({ email: data }).exec()) {
+      throw new HttpException('USER_ALREADY_EXISTS', HttpStatus.CONFLICT);
+    } else if (await this.userModel.findOne({ username: data })) {
+      throw new HttpException('USER_ALREADY_EXISTS', HttpStatus.CONFLICT);
+    }
   }
 }

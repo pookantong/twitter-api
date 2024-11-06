@@ -23,7 +23,7 @@ import { FileModule } from './modules/file/file.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
-        uri: configService.get<string>('mongodb.url'),
+        uri: configService.get<string>('DB.URI'),
       }),
     }),
     AuthModule,

@@ -13,6 +13,7 @@ async function bootstrap() {
     preflightContinue: false,
     optionsSuccessStatus: 204,
   };
+  app.setGlobalPrefix('api');
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
   app.enableCors(corsOptions);

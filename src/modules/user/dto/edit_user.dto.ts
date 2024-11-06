@@ -17,5 +17,5 @@ export class EditUserDto {
   profileImageName: string;
 
   @IsEmpty()
-  coverImageName: string
+  coverImageName: string;
 }

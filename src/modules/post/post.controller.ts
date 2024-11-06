@@ -22,11 +22,11 @@ import { CreatePostDto } from './dto/create_post.dto';
 import { PostService } from './post.service';
 import { GetUser } from 'src/common/decorators/get-user.decorator';
 import { User } from '../user/schemas/user.schema';
-import { JwtAuthGuard } from 'src/common/guards/jwt.guard';
+import { AccessTokenGuard } from 'src/modules/auth/guards/access-token.guard';
 import { IPost, IPosts } from 'src/common/interfaces/post.interface';
 import { EditPostDto } from './dto/edit_post.dto';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(AccessTokenGuard)
 @Controller('post')
 export class PostController {
   constructor(private postService: PostService) {}

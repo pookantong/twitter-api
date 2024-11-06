@@ -3,9 +3,9 @@ import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './schemas/user.schema';
-import { JwtStrategy } from 'src/common/strategies/jwt.strategy';
 import { MulterModule } from '@nestjs/platform-express';
 import { PostModule } from '../post/post.module';
+import { AccessTokenStrategy } from '../auth/strategies/access-token.strategy';
 
 @Module({
   imports: [
@@ -15,7 +15,7 @@ import { PostModule } from '../post/post.module';
     }),
     PostModule,
   ],
-  providers: [UserService, JwtStrategy],
+  providers: [UserService, AccessTokenStrategy],
   controllers: [UserController],
   exports: [UserService],
 })
