@@ -1,0 +1,49 @@
+services:
+  # server:
+  #   build:
+  #     context: .
+  #   environment:
+  #     NODE_ENV: production
+  #   ports:
+  #     - 8000:8000
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - '27017:27017'
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_storage:/data/db
+    restart: unless-stopped
+    env_file:
+        - .env
+
+  # minio:
+  #   image: minio/minio
+  #   ports:
+  #     - '9000:9000'
+  #     - '9001:9001'
+  #   volumes:
+  #     - minio_storage:/data
+  #   restart: unless-stopped
+  #   env_file:
+  #       - .env
+  #   environment:
+  #     MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+  #     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+  #   command: server --console-address ":9001" /data
+
+  # cache:
+  #   image: redis:6
+  #   env_file:
+  #     - .env
+  #   restart: unless-stopped
+  #   ports:
+  #     - '6379:6379'
+  #   command: redis-server --requirepass ${REDIS_PASSWORD}
+    
+volumes:
+  # minio_storage: {}
+  mongo_storage: {}
